@@ -1,2 +1,2 @@
-binary "https://raw.githubusercontent.com/ilammy/openssl-apple/cossacklabs/carthage/openssl-iOS.json" "1.0.221"
-binary "https://raw.githubusercontent.com/ilammy/openssl-apple/cossacklabs/carthage/openssl-macOS.json" "1.0.221"
+binary "https://raw.githubusercontent.com/cossacklabs/openssl-apple/cossacklabs-v2/carthage/openssl-static-iOS.json" "1.0.221"
+binary "https://raw.githubusercontent.com/cossacklabs/openssl-apple/cossacklabs-v2/carthage/openssl-static-macOS.json" "1.0.221"
