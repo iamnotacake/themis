@@ -75,7 +75,7 @@ use bindings::{
 };
 
 use crate::error::{themis_status_t, Error, ErrorKind, Result};
-use crate::keys::{EcdsaPrivateKey, EcdsaPublicKey};
+use crate::keys::{PrivateKey, PublicKey};
 use crate::utils::into_raw_parts;
 
 /// Secure Session context.
@@ -161,7 +161,7 @@ pub trait SecureSessionTransport {
     /// Get a public key corresponding to a remote peer ID.
     ///
     /// Return `None` if you are unable to locate a public key corresponding to the provided ID.
-    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey>;
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey>;
 
     /// Send the provided data to the peer, return the number of bytes transferred.
     ///
@@ -236,7 +236,7 @@ pub trait SecureSessionTransport {
 /// use std::net::TcpStream;
 ///
 /// use themis::secure_session::{SecureSessionTransport, TransportError};
-/// # use themis::keys::EcdsaPublicKey;
+/// # use themis::keys::PublicKey;
 ///
 /// struct SocketTransport {
 ///     socket: TcpStream,
@@ -270,7 +270,7 @@ pub trait SecureSessionTransport {
 ///
 ///     // Other methods omitted
 /// #
-/// #   fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey> {
+/// #   fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
 /// #       None
 /// #   }
 /// }
@@ -360,7 +360,7 @@ impl SecureSession {
     /// ID is an arbitrary non-empty byte sequence used to identify this peer.
     pub fn new(
         id: impl AsRef<[u8]>,
-        key: &EcdsaPrivateKey,
+        key: &PrivateKey,
         transport: impl SecureSessionTransport + 'static,
     ) -> Result<Self> {
         // TODO: human-readable detailed descriptions for errors

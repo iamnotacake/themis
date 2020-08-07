@@ -15,7 +15,7 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use themis::keygen::gen_ec_key_pair;
-use themis::keys::EcdsaPublicKey;
+use themis::keys::{EcdsaPublicKey, PublicKey};
 use themis::secure_session::{
     SecureSession, SecureSessionState, SecureSessionTransport, TransportError,
 };
@@ -24,6 +24,7 @@ use themis::ErrorKind;
 #[test]
 fn invalid_client_id() {
     let (private, _) = gen_ec_key_pair().split();
+    let private = private.into();
     let transport = MockTransport::new();
 
     let error = SecureSession::new(&[], &private, transport)
@@ -36,7 +37,9 @@ fn invalid_client_id() {
 fn no_transport() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -108,7 +111,9 @@ fn no_transport() {
 fn with_transport() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -149,7 +154,9 @@ fn with_transport() {
 fn connection_state_reporting() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -193,7 +200,9 @@ fn connection_state_reporting() {
 fn server_does_not_identify_client() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, _public_client) = gen_ec_key_pair().split();
+    let private_client = private_client.into();
     let (private_server, _public_server) = gen_ec_key_pair().split();
+    let private_server = private_server.into();
 
     let transport_client = MockTransport::new();
 
@@ -221,7 +230,9 @@ fn server_does_not_identify_client() {
 fn client_does_not_identify_server() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, _public_server) = gen_ec_key_pair().split();
+    let private_server = private_server.into();
 
     let mut transport_client = MockTransport::new();
     expect_no_peers(&mut transport_client);
@@ -253,6 +264,7 @@ fn client_does_not_identify_server() {
 fn forward_error_send_at_connection() {
     let name_client = "client";
     let (private_client, _public_client) = gen_ec_key_pair().split();
+    let private_client = private_client.into();
 
     let mut transport_client = MockTransport::new();
 
@@ -275,7 +287,9 @@ fn forward_error_send_at_connection() {
 fn forward_error_receive_at_connection() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -311,7 +325,9 @@ fn forward_error_receive_at_connection() {
 fn forward_error_send_at_negotiation() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -348,7 +364,9 @@ fn forward_error_send_at_negotiation() {
 fn forward_error_receive_at_negotiation() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -384,7 +402,9 @@ fn forward_error_receive_at_negotiation() {
 fn forward_error_send_at_exchange() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -426,7 +446,9 @@ fn forward_error_send_at_exchange() {
 fn forward_error_receive_at_exchange() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -470,7 +492,9 @@ fn forward_error_receive_at_exchange() {
 fn cannot_send_empty_message() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -503,7 +527,9 @@ fn cannot_send_empty_message() {
 fn cannot_receive_empty_message() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -540,7 +566,9 @@ fn cannot_receive_empty_message() {
 fn panic_in_get_pubkey_by_id_client() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, _public_server) = gen_ec_key_pair().split();
+    let private_server = private_server.into();
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -566,7 +594,9 @@ fn panic_in_get_pubkey_by_id_client() {
 fn panic_in_get_pubkey_by_id_server() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, _public_client) = gen_ec_key_pair().split();
+    let private_client = private_client.into();
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -590,6 +620,7 @@ fn panic_in_get_pubkey_by_id_server() {
 #[test]
 fn panic_in_send_data() {
     let (private_client, _) = gen_ec_key_pair().split();
+    let private_client = private_client.into();
 
     let mut transport_client = MockTransport::new();
 
@@ -608,6 +639,7 @@ fn panic_in_send_data() {
 #[test]
 fn panic_in_receive_data() {
     let (private_server, _) = gen_ec_key_pair().split();
+    let private_server = private_server.into();
 
     let mut transport_server = MockTransport::new();
 
@@ -627,7 +659,9 @@ fn panic_in_receive_data() {
 fn panic_in_status_change() {
     let (name_client, name_server) = ("client", "server");
     let (private_client, public_client) = gen_ec_key_pair().split();
+    let (private_client, public_client) = (private_client.into(), public_client.into());
     let (private_server, public_server) = gen_ec_key_pair().split();
+    let (private_server, public_server) = (private_server.into(), public_server.into());
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
@@ -660,7 +694,7 @@ fn panic_in_status_change() {
 // MockTransport implementation
 //
 
-type GetPublicKeyForID = Box<dyn FnMut(&[u8]) -> Option<EcdsaPublicKey>>;
+type GetPublicKeyForID = Box<dyn FnMut(&[u8]) -> Option<PublicKey>>;
 type SendData = Box<dyn FnMut(&[u8]) -> Result<usize, TransportError>>;
 type ReceiveData = Box<dyn FnMut(&mut [u8]) -> Result<usize, TransportError>>;
 type StateChanged = Box<dyn FnMut(SecureSessionState)>;
@@ -674,7 +708,7 @@ struct MockTransport {
 }
 
 impl SecureSessionTransport for MockTransport {
-    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey> {
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
         if let Some(get_public_key_for_id) = &mut self.impl_get_public_key_for_id {
             get_public_key_for_id(id)
         } else {
@@ -712,7 +746,7 @@ impl MockTransport {
 
     fn when_get_public_key_for_id(
         &mut self,
-        f: impl FnMut(&[u8]) -> Option<EcdsaPublicKey> + 'static,
+        f: impl FnMut(&[u8]) -> Option<PublicKey> + 'static,
     ) -> &mut Self {
         self.impl_get_public_key_for_id = Some(Box::new(f));
         self
@@ -747,7 +781,7 @@ impl MockTransport {
 fn expect_peer(
     transport: &mut MockTransport,
     peer_id: impl AsRef<[u8]>,
-    public_key: &EcdsaPublicKey,
+    public_key: &PublicKey,
 ) {
     let peer_id = peer_id.as_ref().to_vec();
     let public_key = public_key.clone();

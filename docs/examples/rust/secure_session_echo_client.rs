@@ -19,7 +19,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use clap::clap_app;
 use lazy_static::lazy_static;
 use log::{debug, info};
-use themis::keys::{EcdsaPrivateKey, EcdsaPublicKey};
+use themis::keys::{EcdsaPrivateKey, EcdsaPublicKey, PublicKey};
 use themis::secure_session::{SecureSession, SecureSessionTransport};
 
 const MAX_MESSAGE_SIZE: usize = 10000;
@@ -39,9 +39,9 @@ lazy_static! {
 struct ExpectServer;
 
 impl SecureSessionTransport for ExpectServer {
-    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey> {
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
         if id == SERVER_ID {
-            Some(SERVER_PUBLIC.clone())
+            Some(SERVER_PUBLIC.clone().into())
         } else {
             None
         }
@@ -64,7 +64,7 @@ fn main() {
 
     let mut socket = TcpStream::connect(&remote_addr).expect("client connection");
 
-    let mut session = SecureSession::new(&CLIENT_ID, &CLIENT_PRIVATE, ExpectServer)
+    let mut session = SecureSession::new(&CLIENT_ID, &CLIENT_PRIVATE.clone().into(), ExpectServer)
         .expect("Secure Session client");
     let mut buffer = [0; MAX_MESSAGE_SIZE];
 

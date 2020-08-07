@@ -19,7 +19,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use clap::clap_app;
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
-use themis::keys::{EcdsaPrivateKey, EcdsaPublicKey};
+use themis::keys::{EcdsaPrivateKey, EcdsaPublicKey, PublicKey};
 use themis::secure_session::{
     SecureSession, SecureSessionState, SecureSessionTransport, TransportError,
 };
@@ -49,10 +49,10 @@ impl SocketTransport {
 }
 
 impl SecureSessionTransport for SocketTransport {
-    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey> {
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
         match id {
-            CLIENT_ID => Some(CLIENT_PUBLIC.clone()),
-            SERVER_ID => Some(SERVER_PUBLIC.clone()),
+            CLIENT_ID => Some(CLIENT_PUBLIC.clone().into()),
+            SERVER_ID => Some(SERVER_PUBLIC.clone().into()),
             _ => None,
         }
     }
@@ -121,7 +121,7 @@ fn main() {
             info!("{:?}: connected", client_address);
 
             let transport = SocketTransport::new(client);
-            let mut session = SecureSession::new(&SERVER_ID, &SERVER_PRIVATE, transport)
+            let mut session = SecureSession::new(&SERVER_ID, &SERVER_PRIVATE.clone().into(), transport)
                 .expect("Secure Session server");
 
             while !session.is_established() {
