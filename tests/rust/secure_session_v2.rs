@@ -15,26 +15,23 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use themis::keygen::gen_ec_key_pair;
-use themis::keys::EcdsaPublicKey;
-#[allow(deprecated)]
+use themis::keys::PublicKey;
 use themis::secure_session::{
-    SecureSession, SecureSessionState, SecureSessionTransport, TransportError,
+    SecureSession, SecureSessionState, SecureSessionTransport2, TransportError,
 };
 use themis::ErrorKind;
 
-#[allow(deprecated)]
 #[test]
 fn invalid_client_id() {
     let (private, _) = gen_ec_key_pair().split();
     let transport = MockTransport::new();
 
-    let error = SecureSession::new(&[], &private, transport)
+    let error = SecureSession::new2(&[], &private, transport)
         .expect_err("construction with empty client ID");
 
     assert_eq!(error.kind(), ErrorKind::InvalidParameter);
 }
 
-#[allow(deprecated)]
 #[test]
 fn no_transport() {
     let (name_client, name_server) = ("client", "server");
@@ -44,13 +41,13 @@ fn no_transport() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     // The client and the server.
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     assert!(!client.is_established());
@@ -107,7 +104,6 @@ fn no_transport() {
     assert_eq!(unwrapped2, b"message 2");
 }
 
-#[allow(deprecated)]
 #[test]
 fn with_transport() {
     let (name_client, name_server) = ("client", "server");
@@ -117,14 +113,14 @@ fn with_transport() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     assert!(!client.is_established());
@@ -149,7 +145,6 @@ fn with_transport() {
     assert_eq!(received, message);
 }
 
-#[allow(deprecated)]
 #[test]
 fn connection_state_reporting() {
     let (name_client, name_server) = ("client", "server");
@@ -159,15 +154,15 @@ fn connection_state_reporting() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_server, &name_client, &public_client);
-    expect_peer(&mut transport_client, &name_server, &public_server);
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
 
     let state_client = monitor_state_changes(&mut transport_client);
     let state_server = monitor_state_changes(&mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     let connect_request = client.connect_request().expect("connect request");
@@ -194,7 +189,6 @@ fn connection_state_reporting() {
     assert!(key_confirmed.is_empty());
 }
 
-#[allow(deprecated)]
 #[test]
 fn server_does_not_identify_client() {
     let (name_client, name_server) = ("client", "server");
@@ -206,9 +200,9 @@ fn server_does_not_identify_client() {
     let mut transport_server = MockTransport::new();
     expect_no_peers(&mut transport_server);
 
-    let mut client = SecureSession::new(&name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(&name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(&name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(&name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     let connect_request = client.connect_request().expect("connect request");
@@ -223,7 +217,6 @@ fn server_does_not_identify_client() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn client_does_not_identify_server() {
     let (name_client, name_server) = ("client", "server");
@@ -234,11 +227,11 @@ fn client_does_not_identify_server() {
     expect_no_peers(&mut transport_client);
 
     let mut transport_server = MockTransport::new();
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
-    let mut client = SecureSession::new(&name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(&name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(&name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(&name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     let connect_request = client.connect_request().expect("connect request");
@@ -256,7 +249,6 @@ fn client_does_not_identify_server() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_send_at_connection() {
     let name_client = "client";
@@ -266,7 +258,7 @@ fn forward_error_send_at_connection() {
 
     let mut next_client_send = override_send(&mut transport_client);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
 
     next_client_send.will_be(|_| Err(TransportError::new("error")));
@@ -279,7 +271,6 @@ fn forward_error_send_at_connection() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_receive_at_connection() {
     let (name_client, name_server) = ("client", "server");
@@ -289,16 +280,16 @@ fn forward_error_receive_at_connection() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_server_receive = override_receive(&mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     // Establishing connection.
@@ -316,7 +307,6 @@ fn forward_error_receive_at_connection() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_send_at_negotiation() {
     let (name_client, name_server) = ("client", "server");
@@ -326,16 +316,16 @@ fn forward_error_send_at_negotiation() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_server_send = override_send(&mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -354,7 +344,6 @@ fn forward_error_send_at_negotiation() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_receive_at_negotiation() {
     let (name_client, name_server) = ("client", "server");
@@ -364,16 +353,16 @@ fn forward_error_receive_at_negotiation() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_client_receive = override_receive(&mut transport_client);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -391,7 +380,6 @@ fn forward_error_receive_at_negotiation() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_send_at_exchange() {
     let (name_client, name_server) = ("client", "server");
@@ -401,16 +389,16 @@ fn forward_error_send_at_exchange() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_client_send = override_send(&mut transport_client);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -434,7 +422,6 @@ fn forward_error_send_at_exchange() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn forward_error_receive_at_exchange() {
     let (name_client, name_server) = ("client", "server");
@@ -444,16 +431,16 @@ fn forward_error_receive_at_exchange() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_server_receive = override_receive(&mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -479,7 +466,6 @@ fn forward_error_receive_at_exchange() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn cannot_send_empty_message() {
     let (name_client, name_server) = ("client", "server");
@@ -489,14 +475,14 @@ fn cannot_send_empty_message() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -513,7 +499,6 @@ fn cannot_send_empty_message() {
     assert_eq!(error.kind(), ErrorKind::InvalidParameter);
 }
 
-#[allow(deprecated)]
 #[test]
 fn cannot_receive_empty_message() {
     let (name_client, name_server) = ("client", "server");
@@ -523,16 +508,16 @@ fn cannot_receive_empty_message() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     let mut next_client_receive = override_receive(&mut transport_client);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -551,7 +536,6 @@ fn cannot_receive_empty_message() {
     assert_eq!(error.kind(), ErrorKind::InvalidParameter);
 }
 
-#[allow(deprecated)]
 #[test]
 fn panic_in_get_pubkey_by_id_client() {
     let (name_client, name_server) = ("client", "server");
@@ -562,13 +546,13 @@ fn panic_in_get_pubkey_by_id_client() {
     let mut transport_server = MockTransport::new();
 
     transport_client.when_get_public_key_for_id(|_| panic!());
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -578,7 +562,6 @@ fn panic_in_get_pubkey_by_id_client() {
     assert_eq!(error.kind(), ErrorKind::SessionGetPublicKeyForIdError);
 }
 
-#[allow(deprecated)]
 #[test]
 fn panic_in_get_pubkey_by_id_server() {
     let (name_client, name_server) = ("client", "server");
@@ -588,14 +571,14 @@ fn panic_in_get_pubkey_by_id_server() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
     transport_server.when_get_public_key_for_id(|_| panic!());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client connect");
@@ -604,7 +587,6 @@ fn panic_in_get_pubkey_by_id_server() {
     assert_eq!(error.kind(), ErrorKind::SessionGetPublicKeyForIdError);
 }
 
-#[allow(deprecated)]
 #[test]
 fn panic_in_send_data() {
     let (private_client, _) = gen_ec_key_pair().split();
@@ -613,7 +595,7 @@ fn panic_in_send_data() {
 
     transport_client.when_send_data(|_| panic!());
 
-    let mut client = SecureSession::new("client", &private_client, transport_client)
+    let mut client = SecureSession::new2("client", &private_client, transport_client)
         .expect("Secure Session client");
 
     let error = client.connect().expect_err("catch client panic");
@@ -623,7 +605,6 @@ fn panic_in_send_data() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn panic_in_receive_data() {
     let (private_server, _) = gen_ec_key_pair().split();
@@ -632,7 +613,7 @@ fn panic_in_receive_data() {
 
     transport_server.when_receive_data(|_| panic!());
 
-    let mut server = SecureSession::new("server", &private_server, transport_server)
+    let mut server = SecureSession::new2("server", &private_server, transport_server)
         .expect("Secure Session server");
 
     let error = server.negotiate().expect_err("catch server panic");
@@ -642,7 +623,6 @@ fn panic_in_receive_data() {
     );
 }
 
-#[allow(deprecated)]
 #[test]
 fn panic_in_status_change() {
     let (name_client, name_server) = ("client", "server");
@@ -652,17 +632,17 @@ fn panic_in_status_change() {
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server);
-    expect_peer(&mut transport_server, &name_client, &public_client);
+    expect_peer(&mut transport_client, &name_server, &public_server.into());
+    expect_peer(&mut transport_server, &name_client, &public_client.into());
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
     transport_client.when_state_changed(|_| panic!());
     transport_server.when_state_changed(|_| panic!());
 
-    let mut client = SecureSession::new(name_client, &private_client, transport_client)
+    let mut client = SecureSession::new2(name_client, &private_client, transport_client)
         .expect("Secure Session client");
-    let mut server = SecureSession::new(name_server, &private_server, transport_server)
+    let mut server = SecureSession::new2(name_server, &private_server, transport_server)
         .expect("Secure Session server");
 
     client.connect().expect("client-side connection");
@@ -680,7 +660,7 @@ fn panic_in_status_change() {
 // MockTransport implementation
 //
 
-type GetPublicKeyForID = Box<dyn FnMut(&[u8]) -> Option<EcdsaPublicKey>>;
+type GetPublicKeyForID = Box<dyn FnMut(&[u8]) -> Option<PublicKey>>;
 type SendData = Box<dyn FnMut(&[u8]) -> Result<usize, TransportError>>;
 type ReceiveData = Box<dyn FnMut(&mut [u8]) -> Result<usize, TransportError>>;
 type StateChanged = Box<dyn FnMut(SecureSessionState)>;
@@ -693,9 +673,8 @@ struct MockTransport {
     impl_state_changed: Option<StateChanged>,
 }
 
-#[allow(deprecated)]
-impl SecureSessionTransport for MockTransport {
-    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<EcdsaPublicKey> {
+impl SecureSessionTransport2 for MockTransport {
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
         if let Some(get_public_key_for_id) = &mut self.impl_get_public_key_for_id {
             get_public_key_for_id(id)
         } else {
@@ -733,7 +712,7 @@ impl MockTransport {
 
     fn when_get_public_key_for_id(
         &mut self,
-        f: impl FnMut(&[u8]) -> Option<EcdsaPublicKey> + 'static,
+        f: impl FnMut(&[u8]) -> Option<PublicKey> + 'static,
     ) -> &mut Self {
         self.impl_get_public_key_for_id = Some(Box::new(f));
         self
@@ -768,7 +747,7 @@ impl MockTransport {
 fn expect_peer(
     transport: &mut MockTransport,
     peer_id: impl AsRef<[u8]>,
-    public_key: &EcdsaPublicKey,
+    public_key: &PublicKey,
 ) {
     let peer_id = peer_id.as_ref().to_vec();
     let public_key = public_key.clone();

@@ -75,7 +75,7 @@ use bindings::{
 };
 
 use crate::error::{themis_status_t, Error, ErrorKind, Result};
-use crate::keys::{EcdsaPrivateKey, EcdsaPublicKey};
+use crate::keys::{EcdsaPrivateKey, EcdsaPublicKey, PrivateKey, PublicKey};
 use crate::utils::into_raw_parts;
 
 /// Secure Session context.
@@ -139,7 +139,7 @@ pub struct SecureSession {
 
 struct SecureSessionContext {
     callbacks: secure_session_user_callbacks_t,
-    transport: Box<dyn SecureSessionTransport>,
+    transport: Box<dyn SecureSessionTransport2>,
     last_error: Option<TransportError>,
 }
 
@@ -156,6 +156,7 @@ unsafe impl Send for SecureSession {}
 /// but some functionality may be unavailable.
 ///
 /// [`get_public_key_for_id`]: trait.SecureSessionTransport.html#tymethod.get_public_key_for_id
+#[deprecated(since = "0.13.1", note = "Please use `SecureSessionTransport2` instead")]
 #[allow(unused_variables)]
 pub trait SecureSessionTransport {
     /// Get a public key corresponding to a remote peer ID.
@@ -215,6 +216,99 @@ pub trait SecureSessionTransport {
     ///
     /// This method is truly optional and has no effect on Secure Session operation.
     fn state_changed(&mut self, state: SecureSessionState) {}
+}
+
+/// Transport delegate for Secure Session.
+///
+/// This is an interface you need to provide for Secure Session operation.
+///
+/// The only required method is [`get_public_key_for_id`]. It is required for public key
+/// authentication. Other methods are optional, you can use Secure Session without them,
+/// but some functionality may be unavailable.
+///
+/// [`get_public_key_for_id`]: trait.SecureSessionTransport.html#tymethod.get_public_key_for_id
+#[allow(unused_variables)]
+pub trait SecureSessionTransport2 {
+    /// Get a public key corresponding to a remote peer ID.
+    ///
+    /// Return `None` if you are unable to locate a public key corresponding to the provided ID.
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey>;
+
+    /// Send the provided data to the peer, return the number of bytes transferred.
+    ///
+    /// This method will be called when Secure Session needs to send some data to its peer.
+    ///
+    /// You need to send the entire message to the peer. It is your responsibility to perform
+    /// any necessary framing, splitting, and retrying on the transport layer. Returning anything
+    /// other than `Ok(data.len())` from this method is considered a transport failure.
+    ///
+    /// See also [`TransportError`] on how to handle transport layer failures.
+    ///
+    /// This method is used by [the callback API] ([`connect`], [`negotiate`], [`send`]).
+    /// You need to implement it in order to use this API. You may ignore it if you only use
+    /// [the buffer-aware API].
+    ///
+    /// [`TransportError`]: struct.TransportError.html
+    /// [the callback API]: struct.SecureSession.html#callback-api
+    /// [the buffer-aware API]: struct.SecureSession.html#buffer-aware-api
+    /// [`connect`]: struct.SecureSession.html#method.connect
+    /// [`negotiate`]: struct.SecureSession.html#method.negotiate
+    /// [`send`]: struct.SecureSession.html#method.send
+    fn send_data(&mut self, data: &[u8]) -> result::Result<usize, TransportError> {
+        Err(TransportError::unspecified())
+    }
+
+    /// Receive data from the peer into the provided buffer, return the number of bytes written.
+    ///
+    /// This method will be called when Secure Session expects to receive some data from its peer.
+    /// The length of the buffer indicates the maximum amount of data expected.
+    ///
+    /// You need to store an entire message as sent by the peer into the buffer. It is your
+    /// responsibility to decode any framing, reconstruct the message from split parts, and retry
+    /// receiving on the transport layer until you have what appears to be a whole message.
+    ///
+    /// See also [`TransportError`] on how to handle transport layer failures.
+    ///
+    /// This method is used by [the callback API] ([`negotiate`], [`receive`]).
+    /// You need to implement it in order to use this API. You may ignore it if you only use
+    /// [the buffer-aware API].
+    ///
+    /// [`TransportError`]: struct.TransportError.html
+    /// [the callback API]: struct.SecureSession.html#callback-api
+    /// [the buffer-aware API]: struct.SecureSession.html#buffer-aware-api
+    /// [`negotiate`]: struct.SecureSession.html#method.negotiate
+    /// [`receive`]: struct.SecureSession.html#method.receive
+    fn receive_data(&mut self, data: &mut [u8]) -> result::Result<usize, TransportError> {
+        Err(TransportError::unspecified())
+    }
+
+    /// Notification about the connection state of the Secure Session.
+    ///
+    /// This method is truly optional and has no effect on Secure Session operation.
+    fn state_changed(&mut self, state: SecureSessionState) {}
+}
+
+#[allow(deprecated)]
+impl<T> SecureSessionTransport2 for T
+where
+    T: SecureSessionTransport
+{
+    fn get_public_key_for_id(&mut self, id: &[u8]) -> Option<PublicKey> {
+        <Self as SecureSessionTransport>::get_public_key_for_id(self, id)
+            .map(|key| key.into())
+    }
+
+    fn send_data(&mut self, data: &[u8]) -> result::Result<usize, TransportError> {
+        <Self as SecureSessionTransport>::send_data(self, data)
+    }
+
+    fn receive_data(&mut self, data: &mut [u8]) -> result::Result<usize, TransportError> {
+        <Self as SecureSessionTransport>::receive_data(self, data)
+    }
+
+    fn state_changed(&mut self, state: SecureSessionState) {
+        <Self as SecureSessionTransport>::state_changed(self, state)
+    }
 }
 
 /// Transport layer error.
@@ -358,11 +452,64 @@ impl SecureSession {
     /// Creates a new Secure Session.
     ///
     /// ID is an arbitrary non-empty byte sequence used to identify this peer.
+    #[deprecated(since = "0.13.1", note = "Please use `SecureSession::new2` instead")]
+    #[allow(deprecated)]
     pub fn new(
         id: impl AsRef<[u8]>,
         key: &EcdsaPrivateKey,
         transport: impl SecureSessionTransport + 'static,
     ) -> Result<Self> {
+        // TODO: human-readable detailed descriptions for errors
+        // It would be nice to tell the user what exactly is wrong with parameters.
+        if id.as_ref().is_empty() {
+            return Err(Error::with_kind(ErrorKind::InvalidParameter));
+        }
+
+        let (id_ptr, id_len) = into_raw_parts(id.as_ref());
+        let (key_ptr, key_len) = into_raw_parts(key.as_ref());
+
+        let mut context = Box::new(SecureSessionContext {
+            callbacks: secure_session_user_callbacks_t {
+                send_data: Some(send_data),
+                receive_data: Some(receive_data),
+                state_changed: Some(state_changed),
+                get_public_key_for_id: Some(get_public_key_for_id),
+                user_data: std::ptr::null_mut(),
+            },
+            transport: Box::new(transport),
+            last_error: None,
+        });
+        context.callbacks.user_data = context_as_user_data(&context);
+
+        let session = unsafe {
+            secure_session_create(
+                id_ptr as *const c_void,
+                id_len,
+                key_ptr as *const c_void,
+                key_len,
+                &context.callbacks,
+            )
+        };
+
+        if session.is_null() {
+            // This is most likely an allocation error but we have no way to know.
+            return Err(Error::with_kind(ErrorKind::NoMemory));
+        }
+
+        Ok(Self { session, context })
+    }
+
+    /// Creates a new Secure Session. Accepts any kind of private key (ECDSA or RSA).
+    ///
+    /// ID is an arbitrary non-empty byte sequence used to identify this peer.
+    pub fn new2<T>(
+        id: impl AsRef<[u8]>,
+        key: &T,
+        transport: impl SecureSessionTransport2 + 'static,
+    ) -> Result<Self>
+    where
+        T: Into<PrivateKey> + AsRef<[u8]>,
+    {
         // TODO: human-readable detailed descriptions for errors
         // It would be nice to tell the user what exactly is wrong with parameters.
         if id.as_ref().is_empty() {
