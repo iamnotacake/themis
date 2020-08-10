@@ -14,8 +14,8 @@
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use themis::keygen::gen_ec_key_pair;
-use themis::keys::PublicKey;
+use themis::keygen::{gen_ec_key_pair, gen_rsa_key_pair};
+use themis::keys::{KeyPair, PublicKey};
 use themis::secure_session::{
     SecureSession, SecureSessionState, SecureSessionTransport2, TransportError,
 };
@@ -32,17 +32,20 @@ fn invalid_client_id() {
     assert_eq!(error.kind(), ErrorKind::InvalidParameter);
 }
 
-#[test]
-fn no_transport() {
-    let (name_client, name_server) = ("client", "server");
-    let (private_client, public_client) = gen_ec_key_pair().split();
-    let (private_server, public_server) = gen_ec_key_pair().split();
+fn no_transport<K: Into<KeyPair>>(
+    name_client: &'static str,
+    name_server: &'static str,
+    client_keys: K,
+    server_keys: K,
+) {
+    let (private_client, public_client) = client_keys.into().split();
+    let (private_server, public_server) = server_keys.into().split();
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server.into());
-    expect_peer(&mut transport_server, &name_client, &public_client.into());
+    expect_peer(&mut transport_client, &name_server, &public_server);
+    expect_peer(&mut transport_server, &name_client, &public_client);
 
     // The client and the server.
     let mut client = SecureSession::new2(name_client, &private_client, transport_client)
@@ -105,16 +108,39 @@ fn no_transport() {
 }
 
 #[test]
-fn with_transport() {
-    let (name_client, name_server) = ("client", "server");
-    let (private_client, public_client) = gen_ec_key_pair().split();
-    let (private_server, public_server) = gen_ec_key_pair().split();
+fn no_transport_ecdsa() {
+    no_transport(
+        "client",
+        "server",
+        gen_ec_key_pair(),
+        gen_ec_key_pair(),
+    );
+}
+
+#[test]
+fn no_transport_rsa() {
+    no_transport(
+        "client",
+        "server",
+        gen_rsa_key_pair(),
+        gen_rsa_key_pair(),
+    );
+}
+
+fn with_transport<K: Into<KeyPair>>(
+    name_client: &'static str,
+    name_server: &'static str,
+    client_keys: K,
+    server_keys: K,
+) {
+    let (private_client, public_client) = client_keys.into().split();
+    let (private_server, public_server) = server_keys.into().split();
 
     let mut transport_client = MockTransport::new();
     let mut transport_server = MockTransport::new();
 
-    expect_peer(&mut transport_client, &name_server, &public_server.into());
-    expect_peer(&mut transport_server, &name_client, &public_client.into());
+    expect_peer(&mut transport_client, &name_server, &public_server);
+    expect_peer(&mut transport_server, &name_client, &public_client);
 
     connect_with_channels(&mut transport_client, &mut transport_server);
 
@@ -143,6 +169,26 @@ fn with_transport() {
     let received = server.receive(1024).expect("receive message");
 
     assert_eq!(received, message);
+}
+
+#[test]
+fn with_transport_ecdsa() {
+    with_transport(
+        "client",
+        "server",
+        gen_ec_key_pair(),
+        gen_ec_key_pair(),
+    );
+}
+
+#[test]
+fn with_transport_rsa() {
+    with_transport(
+        "client",
+        "server",
+        gen_rsa_key_pair(),
+        gen_rsa_key_pair(),
+    );
 }
 
 #[test]
